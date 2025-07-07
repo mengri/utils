@@ -1,16 +1,16 @@
-# Common Utils
+# Go Utils
 
-一个功能丰富的 Go 语言工具包，提供企业级应用开发所需的各种通用组件和工具。
+一个轻量级的 Go 语言工具包，提供日常开发所需的各种实用工具和组件。
 
 ## 🚀 特性
 
-- **依赖注入**: 提供两个版本的依赖注入框架
-- **缓存系统**: 支持 Redis 的高性能缓存
-- **数据库存储**: 基于 GORM 的数据库操作封装
-- **权限管理**: 完整的权限控制系统
-- **HTTP 服务器**: 基于 Gin 的 Web 服务器
-- **插件系统**: 灵活的插件架构
-- **工具函数**: 丰富的辅助工具函数
+- **依赖注入**: 轻量级依赖注入框架
+- **泛型工具**: 支持泛型的链表、Set、Map 等数据结构
+- **配置管理**: 基于 YAML 的配置工具
+- **对象池**: 泛型对象池
+- **注册器**: 类型安全的注册处理系统
+- **访问控制**: 简单的访问权限管理
+- **工具函数**: 丰富的切片、Map 操作工具
 
 ## 📦 安装
 
@@ -20,137 +20,41 @@ go get github.com/mengri/utils
 
 ## 🎯 主要模块
 
-### 1. 依赖注入 (Autowire)
+### 1. 依赖注入 (Autowire-v2)
 
-提供两个版本的依赖注入框架：
+轻量级依赖注入框架：
 
-#### Autowire V1
-```go
-import "github.com/mengri/utils/autowire"
-
-type UserService struct {
-    DB *gorm.DB `autowired:""`
-}
-
-func main() {
-    autowire.Autowired(&UserService{})
-}
-```
-
-#### Autowire V2
 ```go
 import "github.com/mengri/utils/autowire-v2"
+
+type UserService struct {
+    DB IDatabase `autowired:""`
+}
 
 // 自动注册
 func init() {
     autowire.Auto(func() IUserService { return &UserService{} })
 }
-```
 
-### 2. 缓存系统 (Cache)
-
-支持 Redis 的 KV 缓存系统：
-
-```go
-import "github.com/mengri/utils/cache"
-
-type User struct {
-    ID   int64  `json:"id"`
-    Name string `json:"name"`
+// 使用
+func main() {
+    autowire.Check()
+    
+    var userService IUserService
+    autowire.Inject(&userService)
 }
-
-// 创建缓存
-cache := cache.CreateKvCache[User, int64](
-    redisClient, 
-    time.Minute*10,
-    func(id int64) string { return fmt.Sprintf("user:%d", id) },
-)
-
-// 使用缓存
-user, err := cache.Get(ctx, 123)
-err = cache.Set(ctx, 123, &user)
 ```
 
-### 3. 数据库存储 (Store)
+### 2. 泛型数据结构
 
-基于 GORM 的数据库操作封装：
-
-```go
-import "github.com/mengri/utils/store"
-
-type User struct {
-    ID   int64  `gorm:"primaryKey"`
-    Name string `gorm:"not null"`
-}
-
-func (u *User) TableName() string { return "users" }
-func (u *User) IdValue() int64 { return u.ID }
-
-// 使用存储
-store := store.NewBaseStore[User](db)
-user, err := store.Get(ctx, 123)
-err = store.Save(ctx, &user)
-```
-
-### 4. 权限管理 (Permit)
-
-完整的权限控制系统：
-
-```go
-import "github.com/mengri/utils/permit"
-
-// 添加权限
-err := permit.Add(ctx, "read", "article", "article:123")
-
-// 检查权限
-allowed, err := permit.Check(ctx, "article", []string{"article:123"}, []string{"read"})
-
-// 获取权限
-targets, err := permit.Granted(ctx, "read", "article")
-```
-
-### 5. HTTP 服务器 (Server)
-
-基于 Gin 的 Web 服务器：
-
-```go
-import "github.com/mengri/utils/server"
-
-server := server.NewServer()
-server.GET("/users", func(c *gin.Context) {
-    // 处理逻辑
-})
-```
-
-### 6. 插件系统 (Plugins)
-
-灵活的插件架构：
-
-```go
-import "github.com/mengri/utils/plugins"
-
-type MyPlugin struct{}
-
-func (p *MyPlugin) Initialize() error {
-    // 初始化逻辑
-    return nil
-}
-
-// 注册插件
-plugins.Register("my-plugin", &MyPlugin{})
-```
-
-### 7. 泛型链表 (List)
-
-泛型双向链表实现：
-
+#### 双向链表 (List)
 ```go
 import "github.com/mengri/utils/list"
 
-l := list.New[int]()
-l.PushBack(1)
-l.PushBack(2)
-l.PushFront(0)
+l := list.New[string]()
+l.PushBack("hello")
+l.PushBack("world")
+l.PushFront("hi")
 
 // 遍历
 for e := l.Front(); e != nil; e = e.Next() {
@@ -158,20 +62,189 @@ for e := l.Front(); e != nil; e = e.Next() {
 }
 ```
 
-### 8. 自动化工具 (Auto)
-
-提供自动化处理工具：
-
+#### 泛型 Set
 ```go
-import "github.com/mengri/utils/auto"
+import "github.com/mengri/utils/utils"
 
-type Config struct {
-    Database Label `aolabel:"database"`
-    Redis    Label `aolabel:"redis"`
+set := utils.NewSet[string]()
+set.Set("apple", "banana", "orange")
+
+if set.Has("apple") {
+    fmt.Println("Found apple")
 }
 
-// 自动标签处理
-labels := auto.CreateLabels(&config)
+list := set.ToList()
+```
+
+#### 泛型 Untyped Map
+```go
+import "github.com/mengri/utils/untyped"
+
+m := utils.BuildUntyped[string, int]()
+m.Set("age", 25)
+m.Set("score", 100)
+
+if age, ok := m.Get("age"); ok {
+    fmt.Println("Age:", age)
+}
+
+keys := m.Keys()
+values := m.List()
+```
+
+### 3. 对象池 (Pool)
+
+泛型对象池：
+
+```go
+import "github.com/mengri/utils/pool"
+
+type Buffer struct {
+    data []byte
+}
+
+// 创建对象池
+bufferPool := pool.New[*Buffer](func() *Buffer {
+    return &Buffer{data: make([]byte, 0, 1024)}
+})
+
+// 使用对象池
+buffer := bufferPool.Get()
+defer bufferPool.PUT(buffer)
+
+// 使用 buffer...
+```
+
+### 4. 配置管理 (CFTool)
+
+基于 YAML 的配置工具：
+
+```go
+import "github.com/mengri/utils/cftool"
+
+type DatabaseConfig struct {
+    Host string `yaml:"host"`
+    Port int    `yaml:"port"`
+}
+
+// 注册配置
+func init() {
+    cftool.Register[DatabaseConfig]("database")
+}
+
+// 从文件加载
+func main() {
+    cftool.ReadFile("config.yaml")
+}
+```
+
+### 5. 注册器 (Register)
+
+类型安全的注册处理系统：
+
+```go
+import "github.com/mengri/utils/register"
+
+type User struct {
+    Name string
+    Age  int
+}
+
+// 注册处理器
+func init() {
+    register.Handle[User](func(user User) {
+        fmt.Printf("User created: %s, age: %d\n", user.Name, user.Age)
+    })
+}
+
+// 调用处理器
+func main() {
+    user := User{Name: "Alice", Age: 30}
+    register.Call(user)
+}
+```
+
+### 6. 访问控制 (Access)
+
+简单的访问权限管理：
+
+```go
+import "github.com/mengri/utils/access"
+
+// 定义访问权限
+permissions := []access.Access{
+    {Name: "read", CName: "读取", Desc: "读取权限"},
+    {Name: "write", CName: "写入", Desc: "写入权限"},
+}
+
+// 添加权限组
+access.Add("article", permissions)
+
+// 获取权限
+if perms, ok := access.Get("article"); ok {
+    for _, perm := range perms {
+        fmt.Printf("Permission: %s (%s)\n", perm.Name, perm.CName)
+    }
+}
+```
+
+### 7. 忽略工具 (Ignore)
+
+路径忽略管理：
+
+```go
+import "github.com/mengri/utils/ignore"
+
+// 设置忽略路径
+ignore.IgnorePath("api", "GET", "/health")
+ignore.IgnorePath("api", "POST", "/internal/*")
+
+// 检查是否忽略
+if ignore.IsIgnorePath("api", "GET", "/health") {
+    fmt.Println("This path is ignored")
+}
+```
+
+### 8. 工具函数
+
+#### 切片操作
+```go
+import "github.com/mengri/utils/utils"
+
+users := []User{
+    {Name: "Alice", Age: 30},
+    {Name: "Bob", Age: 25},
+}
+
+// 切片转换
+names := utils.SliceToSlice(users, func(u User) string { return u.Name })
+
+// 切片转 Map
+userMap := utils.SliceToMap(users, func(u User) string { return u.Name })
+
+// 切片转 Map 数组
+ageGroups := utils.SliceToMapArray(users, func(u User) int { return u.Age / 10 })
+```
+
+#### MD5 计算
+```go
+import "github.com/mengri/utils/utils"
+
+data := []byte("hello world")
+hash := utils.MD5(data)
+fmt.Println(hash)
+```
+
+#### 集合操作
+```go
+import "github.com/mengri/utils/utils"
+
+a := []string{"apple", "banana", "orange"}
+b := []string{"banana", "grape", "orange"}
+
+// 求交集
+intersection := utils.Intersection(a, b)
+fmt.Println(intersection) // [banana orange]
 ```
 
 ### 9. 环境配置 (Env)
@@ -182,79 +255,127 @@ labels := auto.CreateLabels(&config)
 import "github.com/mengri/utils/env"
 
 // 获取环境变量
-dbURL := env.GetEnv("DATABASE_URL", "default_url")
+dbURL := env.GetEnv("DATABASE_URL", "localhost:3306")
 isDebug := env.IsDebug()
+
+// 获取工作目录
+workDir := env.GetWorkDir()
 ```
 
 ### 10. 编码工具 (Encode)
 
-提供 YAML 等编码工具：
+YAML 编码解码：
 
 ```go
 import "github.com/mengri/utils/encode"
 
-// YAML 编码/解码
+type Config struct {
+    Name string `yaml:"name"`
+    Port int    `yaml:"port"`
+}
+
+config := Config{Name: "myapp", Port: 8080}
+
+// 编码
 data, err := encode.YamlMarshal(config)
-err = encode.YamlUnmarshal(data, &config)
+if err != nil {
+    panic(err)
+}
+
+// 解码
+var newConfig Config
+err = encode.YamlUnmarshal(data, &newConfig)
+if err != nil {
+    panic(err)
+}
 ```
 
-## 🛠️ 工具函数
+### 11. 版本信息
 
-### 切片操作
 ```go
-import "github.com/mengri/utils/utils"
+import "github.com/mengri/utils/version"
 
-// 切片转换
-ids := utils.SliceToSlice(users, func(u *User) int64 { return u.ID })
-
-// 切片转 Map
-userMap := utils.SliceToMap(users, func(u *User) int64 { return u.ID })
+// 获取版本信息
+fmt.Println(string(version.VersionsInfo()))
 ```
 
-### 其他工具
-```go
-// MD5 计算
-hash := utils.MD5(data)
+## 🛠️ 完整示例
 
-// Set 操作
-set := utils.NewSet[string]()
-set.Add("item1")
-set.Add("item2")
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/mengri/utils/autowire-v2"
+    "github.com/mengri/utils/cftool"
+    "github.com/mengri/utils/register"
+    "github.com/mengri/utils/utils"
+)
+
+type Config struct {
+    AppName string `yaml:"app_name"`
+    Port    int    `yaml:"port"`
+}
+
+type Logger interface {
+    Log(message string)
+}
+
+type ConsoleLogger struct{}
+
+func (l *ConsoleLogger) Log(message string) {
+    fmt.Printf("[LOG] %s\n", message)
+}
+
+type App struct {
+    Logger Logger `autowired:""`
+    Config Config `autowired:""`
+}
+
+func init() {
+    // 注册依赖
+    autowire.Auto(func() Logger { return &ConsoleLogger{} })
+    autowire.Auto(func() *App { return &App{} })
+    
+    // 注册配置
+    cftool.Register[Config]("app")
+    
+    // 注册处理器
+    register.Handle[string](func(msg string) {
+        fmt.Println("Received message:", msg)
+    })
+}
+
+func main() {
+    // 加载配置
+    cftool.InitFor("app", []byte(`
+app_name: "My App"
+port: 8080
+`))
+    
+    // 检查依赖
+    autowire.Check()
+    
+    // 获取应用实例
+    var app *App
+    autowire.Inject(&app)
+    
+    app.Logger.Log("Application started")
+    
+    // 使用工具函数
+    numbers := []int{1, 2, 3, 4, 5}
+    doubled := utils.SliceToSlice(numbers, func(n int) int { return n * 2 })
+    fmt.Println("Doubled:", doubled)
+    
+    // 使用注册器
+    register.Call("Hello, World!")
+}
 ```
 
 ## 📋 依赖
 
 - **Go**: 1.22.2+
-- **Gin**: Web 框架
-- **GORM**: ORM 框架
-- **Redis**: 缓存支持
-- **UUID**: 唯一 ID 生成
-
-## 🔧 配置
-
-### 数据库配置
-```go
-import "github.com/mengri/utils/store/store_mysql"
-
-config := store_mysql.Config{
-    Host:     "localhost",
-    Port:     3306,
-    Database: "mydb",
-    Username: "user",
-    Password: "password",
-}
-```
-
-### Redis 配置
-```go
-import "github.com/mengri/utils/cache/cache_redis"
-
-redisClient := cache_redis.NewRedisClient(&redis.Options{
-    Addr:     "localhost:6379",
-    Password: "",
-    DB:       0,
-})
-```
+- **YAML**: gopkg.in/yaml.v3
 
 ## 🧪 测试
 
@@ -265,64 +386,14 @@ go test ./...
 
 运行特定模块测试：
 ```bash
-go test ./autowire/
-go test ./cache/
-go test ./store/
-```
-
-## 📖 示例
-
-### 完整的 Web 应用示例
-```go
-package main
-
-import (
-    "context"
-    "github.com/mengri/utils/autowire-v2"
-    "github.com/mengri/utils/server"
-    "github.com/mengri/utils/store"
-    "github.com/gin-gonic/gin"
-)
-
-type User struct {
-    ID   int64  `json:"id" gorm:"primaryKey"`
-    Name string `json:"name" gorm:"not null"`
-}
-
-func (u *User) TableName() string { return "users" }
-func (u *User) IdValue() int64 { return u.ID }
-
-type UserService struct {
-    store store.IBaseStore[User] `autowired:""`
-}
-
-func (s *UserService) GetUser(ctx context.Context, id int64) (*User, error) {
-    return s.store.Get(ctx, id)
-}
-
-func init() {
-    autowire.Auto(func() *UserService { return &UserService{} })
-}
-
-func main() {
-    // 初始化依赖
-    autowire.Check()
-    
-    // 创建服务器
-    srv := server.NewServer()
-    
-    srv.GET("/users/:id", func(c *gin.Context) {
-        // 处理用户请求
-        c.JSON(200, gin.H{"message": "success"})
-    })
-    
-    srv.Run(":8080")
-}
+go test ./autowire-v2/
+go test ./list/
+go test ./register/
 ```
 
 ## 📚 API 文档
 
-详细的 API 文档可以通过 `godoc` 生成：
+生成文档：
 ```bash
 godoc -http=:6060
 ```
@@ -343,20 +414,17 @@ godoc -http=:6060
 ## 🔗 相关链接
 
 - [Go 官方文档](https://golang.org/doc/)
-- [Gin 框架文档](https://gin-gonic.com/docs/)
-- [GORM 文档](https://gorm.io/docs/)
-- [Redis Go 客户端](https://redis.uptrace.dev/)
+- [YAML 规范](https://yaml.org/spec/)
 
 ## 🆕 版本信息
 
-可以通过以下方式查看版本信息：
 ```go
-import "github.com/mengri/utils/utils"
+import "github.com/mengri/utils/version"
 
-fmt.Println(string(utils.VersionsInfo()))
+fmt.Println(string(version.VersionsInfo()))
 ```
 
-## 📞 支持
+---
 
-如有问题或建议，请提交 Issue 或联系开发团队。
+*这是一个轻量级的 Go 工具包，专注于提供实用的工具函数和组件，无外部重型依赖。*
 
