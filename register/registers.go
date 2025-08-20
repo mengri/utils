@@ -6,35 +6,27 @@ import (
 )
 
 type Registers[T any] interface {
-	Register(name string, T any) error
-	ALl() []T
+	Register(name string, t T) error
+	All() map[string]T
 	Get(name string) (T, bool)
 }
 
 type imlRegisters[T any] struct {
-	objects untyped.Untyped[string, T]
+	untyped.Untyped[string, T]
 }
 
 func NewRegisters[T any]() Registers[T] {
 
 	return &imlRegisters[T]{
-		objects: untyped.BuildUntyped[string, T](),
+		Untyped: untyped.BuildUntyped[string, T](),
 	}
 }
 
-func (rs *imlRegisters[T]) Register(name string, T any) error {
-	_, has := rs.objects.Get(name)
+func (rs *imlRegisters[T]) Register(name string, t T) error {
+	_, has := rs.Untyped.Get(name)
 	if has {
 		return fmt.Errorf("%s exits", name)
 	}
-	rs.objects.Set(name, T)
+	rs.Set(name, t)
 	return nil
-}
-
-func (rs *imlRegisters[T]) ALl() []T {
-	return rs.objects.List()
-}
-
-func (rs *imlRegisters[T]) Get(name string) (T, bool) {
-	return rs.objects.Get(name)
 }
