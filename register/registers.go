@@ -15,7 +15,7 @@ type imlRegisters[T any] struct {
 	objects untyped.Untyped[string, T]
 }
 
-func newImlRegisters[T any]() Registers[T] {
+func NewImlRegisters[T any]() Registers[T] {
 
 	return &imlRegisters[T]{
 		objects: untyped.BuildUntyped[string, T](),
