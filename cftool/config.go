@@ -50,16 +50,14 @@ func InitFor(name string, data []byte) {
 		panic(err)
 	}
 }
-func ReadFile(path string) {
+func ReadFile(path string) error {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	err = unmarshalConfig(data, path)
-	if err != nil {
-		panic(err)
-	}
+	return unmarshalConfig(data, path)
+
 }
 func unmarshalConfig(data []byte, name string) error {
 	locker.Lock()
