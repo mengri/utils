@@ -45,6 +45,47 @@ func main() {
 }
 ```
 
+### 1.1 依赖注入升级版 (Autowire-v3)
+
+`autowire-v3` 基于 v2 实现，核心变化是 **将事件控制权交给调用方**：`Check` 支持可选的多个 `Handler` 参数，整个事件周期为 `OnCreate -> OnInitialized -> [handlers] -> OnComplete`。
+
+典型用法：
+
+```go
+import "github.com/mengri/utils/autowire-v3"
+
+type Service struct {
+    Repo Repository `autowired:""`
+}
+
+// 可选：实现生命周期接口
+func (s *Service) Initialized() {}
+func (s *Service) OnComplete()  {}
+
+func init() {
+    autowire.Auto(func() *Service { return &Service{} })
+}
+
+func main() {
+    var svc *Service
+    autowire.Autowired(&svc)
+
+    // 1. 只做依赖检查与注入 + OnCreate + OnInitialized
+    // 2. 在依赖注入完成后，按顺序执行多个 handler
+    // 3. 最后自动调用 OnComplete
+    autowire.Check(
+        autowire.HandlerFunc(func(name string, bean any) {
+            // 可以根据 bean 名称或类型做一些自定义逻辑
+            if _, ok := bean.(*Service); ok {
+                // 自定义初始化逻辑...
+                _ = name
+            }
+        }),
+        // 还可以继续传入更多 Handler
+    )
+}
+```
+
 ### 2. 泛型数据结构
 
 #### 双向链表 (List)
