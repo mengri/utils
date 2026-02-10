@@ -10,17 +10,29 @@ func Check() {
 	lock.Lock()
 	defer lock.Unlock()
 	if isChecked {
+		// 已经进行过一次完整检查，后续再次调用 Check 即使传入 handler 也不再生效
 		return
 	}
-	doCheck()
+
+	doCheck(CreateHandler(func(v PreComplete) { v.OnPreComplete() }), CreateHandler(func(v PostComplete) { v.OnPostComplete() }))
 
 }
-func doCheck() {
+func CheckWithEvent(handlers ...Handler) {
+	lock.Lock()
+	defer lock.Unlock()
+	if isChecked {
+		// 已经进行过一次完整检查，后续再次调用 Check 即使传入 handler 也不再生效
+		return
+	}
+
+	doCheck(handlers...)
+
+}
+func doCheck(handlers ...Handler) {
 
 	if len(requireBy) == 0 {
 		return
 	}
-
 	for {
 		temp := maps.Clone(requireBy)
 		autoCreate(temp)
@@ -28,7 +40,8 @@ func doCheck() {
 			break
 		}
 	}
-	beanOnInitialized() // 执行bean的 OnInitialized 事件
+	// 在依赖注入前调用 OnInitialized
+	beanOnInitialized()
 	lack := make(map[string][]string)
 	for beanName, reqs := range requireBy {
 		b, has := beans[beanName]
@@ -56,31 +69,37 @@ func doCheck() {
 		panicLack(lack)
 		return
 	}
-	// 检查未执行Complete事件的bean,并执行
-	cls := make(CompleteList, 0, len(beans))
-	prcLis := make(PreCompletes, 0, len(beans))
-	pocList := make(PostCompletes, 0, len(beans))
-	for _, b := range beans {
-		if !b.isComplete && b.requireCount == 0 {
-			b.isComplete = true
-			if ch, ok := b.v.Interface().(Complete); ok {
-				cls = append(cls, ch)
-			}
-			if pch, ok := b.v.Interface().(PreComplete); ok {
-				prcLis = append(prcLis, pch)
-			}
-			if poc, ok := b.v.Interface().(PostComplete); ok {
-				pocList = append(pocList, poc)
-			}
+
+	// 依赖注入完成后，先收集当前本次可完成的 bean
+	type beanItem struct {
+		name string
+		b    *bean
+	}
+	items := make([]beanItem, 0, len(beans))
+	for name, b := range beans {
+		if b.requireCount == 0 && !b.isComplete {
+			items = append(items, beanItem{name: name, b: b})
 		}
 	}
+
+	// 先对所有 bean 依次执行所有 handler
+	for _, h := range handlers {
+		for _, item := range items {
+			h.Handle(item.name, item.b.v.Interface())
+		}
+	}
+
+	// 最后对所有 bean 执行 OnComplete
+	for _, item := range items {
+		if ch, ok := item.b.v.Interface().(Complete); ok {
+			ch.OnComplete()
+		}
+		item.b.isComplete = true
+	}
+
 	isChecked = true
 	//清空已经注入的依赖关系表
 	requireBy = make(map[string][]*requireItem)
-
-	prcLis.OnPreComplete()
-	cls.OnComplete()
-	pocList.OnPostComplete()
 }
 
 func autoCreate(reqs map[string][]*requireItem) {
@@ -93,10 +112,8 @@ func autoCreate(reqs map[string][]*requireItem) {
 
 func beanOnInitialized() {
 	for _, bv := range beans {
-		if !bv.isComplete {
-			if ih, ok := bv.v.Interface().(OnInitialized); ok {
-				ih.Initialized()
-			}
+		if ih, ok := bv.v.Interface().(OnInitialized); ok {
+			ih.Initialized()
 		}
 	}
 }

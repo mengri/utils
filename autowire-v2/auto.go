@@ -20,6 +20,7 @@ type factoryItem struct {
 func Auto[T any](handler func() T, otherNames ...string) {
 	lock.Lock()
 	defer lock.Unlock()
+	
 	if isChecked {
 		log.Fatalf("autowire.Auto can not be called after autowire.Check")
 	}

@@ -61,6 +61,7 @@ func Autowired[T any](v T, name ...string) {
 			addBeans(beanName, nb) // 同名的, 第一个才会成为有效的bean
 		}
 		if isChecked {
+			// 再次 doCheck 时不再传入 handler，只做依赖注入，不再重复执行事件
 			doCheck()
 		}
 
